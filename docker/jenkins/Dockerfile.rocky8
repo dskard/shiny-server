@@ -1,0 +1,22 @@
+FROM rockylinux:8.8
+
+# EPEL
+RUN rpm -Uvh https://download.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
+    && yum -y update
+
+RUN yum -y groupinstall "Development tools"
+RUN yum -y install rsyslog passwd sudo wget git python3 tar python3-devel gcc glibc-devel
+
+RUN yum config-manager --set-enabled powertools
+RUN yum install -y R curl libcurl-devel
+
+# Use cmake 3.21.3 (newer is probably fine too). Must avoid 3.18-3.20 due to %posttrans issue
+RUN wget -q https://github.com/Kitware/CMake/releases/download/v3.21.3/cmake-3.21.3-linux-x86_64.tar.gz
+RUN tar xzf cmake-3.21.3-linux-x86_64.tar.gz -C /usr/local --strip-components=1
+
+# create jenkins user, make sudo. try to keep this toward the bottom for less cache busting
+ARG JENKINS_GID=512
+ARG JENKINS_UID=512
+RUN groupadd -g $JENKINS_GID jenkins && \
+    useradd -m -d /var/lib/jenkins -u $JENKINS_UID -g jenkins jenkins && \
+    echo "jenkins ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
